@@ -5,7 +5,6 @@ using EnvReporter.Agent;
 using GitHub.Copilot;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Foundry.Hosting;
-using Microsoft.Agents.AI.GitHub.Copilot;
 using Microsoft.Extensions.Options;
 
 var builder = AgentHost.CreateBuilder(args);
@@ -61,19 +60,18 @@ builder.Services.AddSingleton<AIAgent>(sp =>
                 あなたは実行環境レポーターです。ユーザーに実行環境を聞かれたら、{ShellCommandPolicy.ShellToolName} ツールで次のコマンドだけを 1 つずつ実行して情報を集めてください。
                 {string.Join(Environment.NewLine, ShellCommandPolicy.AllowedCommands.Select(c => $"- {c}"))}
                 コマンドは上記と完全に一致する文字列で実行し、パイプや追加の引数は付けないでください。
+                Microsoft Foundry 上での実行判定は、`printenv FOUNDRY_HOSTING_ENVIRONMENT`（Windows では `$env:FOUNDRY_HOSTING_ENVIRONMENT`）の標準出力だけを使ってください。出力が `1` なら「Microsoft Foundry 上で実行されています」と判定し、出力が空なら「環境変数が設定されていないため判定できません」としてください。それ以外の値も推測せず、値をそのまま示して判定できないと伝えてください。ツールの終了コードと標準出力の値を混同しないでください。
                 結果をもとに、OS、CPU アーキテクチャ、ホスト名、.NET ランタイム、Microsoft Foundry 上で実行されているかどうかを日本語で簡潔にまとめてください。
                 環境変数の値や資格情報は、上記コマンドで得たもの以外は推測しないでください。
                 """,
         },
     };
 
-    return new GitHubCopilotAgent(
-        sp.GetRequiredService<CopilotClient>(),
+    return sp.GetRequiredService<CopilotClient>().AsAIAgent(
         sessionConfig,
         ownsClient: false,
         name: "env-reporter",
-        description: "GitHub Copilot SDK agent that reports the runtime environment using a Microsoft Foundry model deployment.",
-        loggerFactory: sp.GetRequiredService<ILoggerFactory>());
+        description: "GitHub Copilot SDK agent that reports the runtime environment using a Microsoft Foundry model deployment.");
 });
 
 builder.Services.AddFoundryResponses();

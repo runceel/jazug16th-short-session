@@ -16,6 +16,33 @@ var agent = builder.AddProject<Projects.EnvReporter_Agent>("env-reporter")
     .WithReference(chat).WaitFor(chat)
     .AsHostedAgent(project);
 
+// Agent の endpoint を共有し、Agent の起動後に Web 画面を開始する。
+var web = builder.AddProject<Projects.EnvReporter_Web>("env-reporter-web")
+    .WithReference(agent)
+    .WaitFor(agent);
+
+if (!builder.ExecutionContext.IsRunMode)
+{
+    var registryName = builder.AddParameter("existingAcrName");
+    var registryResourceGroup = builder.AddParameter("existingAcrResourceGroup");
+    var registry = builder.AddAzureContainerRegistry("env-reporter-web-acr")
+        .PublishAsExisting(registryName, registryResourceGroup);
+    var containerApps = builder.AddAzureContainerAppEnvironment("env-reporter-web-env")
+        .WithAzureContainerRegistry(registry);
+
+#pragma warning disable ASPIRECOMPUTE003
+    web.WithContainerRegistry(registry);
+#pragma warning restore ASPIRECOMPUTE003
+    var cloudWeb = web.WithComputeEnvironment(containerApps)
+        .PublishAsAzureContainerApp((_, _) => { })
+        .WithEnvironment("Foundry__UseEntraAuthentication", "true");
+
+    if (bool.TryParse(builder.Configuration["Foundry:ExposeWebIngress"], out var exposeWebIngress) && exposeWebIngress)
+    {
+        cloudWeb.WithExternalHttpEndpoints();
+    }
+}
+
 // Locally, DefaultAzureCredential may pick a developer sign-in (e.g. Visual Studio) from another tenant.
 // Pin it to the tenant that Aspire provisions the Foundry resources into.
 if (builder.ExecutionContext.IsRunMode && builder.Configuration["Azure:TenantId"] is { Length: > 0 } tenantId)
