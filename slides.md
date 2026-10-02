@@ -268,29 +268,9 @@ size: large
 `aspire deploy` は、コンテナーイメージを ACR に push し、Foundry project に Hosted Agent を登録する。
 
 <!--
-目安: 1:15
+目安: 1:30
 DEMO 1と同じAppHostをaspire deployで実行します。Aspireはagentのコンテナーイメージをビルドして ACR に push し、Foundry projectにHosted Agentを登録します。ローカル実行との違いは実行場所、受信endpoint、モデル呼び出しに使うIDです。AspireはBYOKのprovider設定、実行時の認証トークン供給、ツールの安全性を自動で決めるものではありません。デプロイ済み環境を使う場合は設定箇所だけ短く説明します。
--->
-
----
-layout: center
-size: large
----
-
-## Hosted Agent の 2 つの認証
-
-デプロイ後は、**誰が・どこに**アクセスするかで認証を分けて考える
-
-| 区間 | 認証する ID | 設定すること |
-|---|---|---|
-| ① クライアント → Hosted Agent | 呼び出し元のユーザー / アプリ | endpoint へのアクセス権 |
-| ② Hosted Agent 内の Copilot SDK → モデル | Hosted Agent の agent identity | 推論用の RBAC ロール |
-
-**② はローカル実行時（サインイン中のユーザー）と ID が変わるため、ロール付与を忘れると推論が失敗する**
-
-<!--
-目安: 1:00
-デプロイ後の実行では二つの認証を区別します。①クライアントからHosted Agent endpointへの認証と、②Hosted Agent内のBYOK providerからモデルendpointへの認証です。②はローカルではサインイン中のユーザーでしたが、Hosted Agentではagent identityに変わるため、token providerが実際に使うprincipalを確認します。Foundry projectのmanaged identityにproject endpoint用のFoundry Userロールがあることは、BYOKの直接endpoint呼び出しに使う別principalの権限を意味しません。`/openai/v1/` のkeyless推論ではscopeは `https://ai.azure.com/.default` です。必要なロールはモデルとendpointにより異なり、OpenAIモデル専用なら `Cognitive Services OpenAI User`、より広いFoundryモデルの推論では `Cognitive Services User` または `Foundry User` が候補です。選択deploymentの要件を確認します。
+モデル呼び出しのIDがサインイン中のユーザーからagent identityに変わるため、BYOKのtoken providerが実際に使うprincipalに推論用のRBACロールが必要です。ロール付与を忘れるとデプロイ後に推論が失敗します。`/openai/v1/` のkeyless推論ではscopeは `https://ai.azure.com/.default` です。必要なロールはモデルとendpointにより異なり、OpenAIモデル専用なら `Cognitive Services OpenAI User`、より広いFoundryモデルの推論では `Cognitive Services User` または `Foundry User` が候補です。Foundry projectのmanaged identityの権限は、BYOKの直接endpoint呼び出しに使う別principalの権限を意味しません。
 -->
 
 ---

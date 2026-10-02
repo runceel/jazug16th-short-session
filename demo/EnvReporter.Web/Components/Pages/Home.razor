@@ -1,0 +1,77 @@
+@using System.ClientModel
+@page "/"
+@rendermode InteractiveServer
+@inject EnvReporter.Web.AgentClient AgentClient
+
+<PageTitle>Agent Tester</PageTitle>
+
+<div class="agent-shell">
+    <section class="hero">
+        <p class="eyebrow">ENV REPORTER / AGENT TESTER</p>
+        <h1>Agent に質問する</h1>
+        <p class="lede">Aspire Dashboard で Web → Agent → Foundry の処理を追跡できます。</p>
+    </section>
+
+    <EditForm Model="this" OnValidSubmit="AskAgentAsync" class="prompt-form">
+        <label for="prompt">Prompt</label>
+        <InputTextArea id="prompt" @bind-Value="Prompt" rows="5" />
+        <button type="submit" disabled="@IsBusy">
+            @(IsBusy ? "問い合わせ中..." : "Agent に送信")
+        </button>
+    </EditForm>
+
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="error" role="alert">@ErrorMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Response))
+    {
+        <section class="response-card">
+            <div class="response-heading">
+                <span>Response</span>
+                <small>Trace: agent.responses</small>
+            </div>
+            <p>@Response</p>
+        </section>
+    }
+</div>
+
+@code {
+    private string Prompt { get; set; } = "実行環境を日本語で教えてください。";
+    private string? Response { get; set; }
+    private string? ErrorMessage { get; set; }
+    private bool IsBusy { get; set; }
+
+    private async Task AskAgentAsync()
+    {
+        // 応答待ちの間は再送信を防ぎ、接続エラーを画面に表示する。
+        IsBusy = true;
+        ErrorMessage = null;
+
+        try
+        {
+            Response = await AgentClient.AskAsync(Prompt);
+        }
+        catch (ClientResultException ex)
+        {
+            ErrorMessage = $"Agent への要求に失敗しました (HTTP {ex.Status}): {ex.Message}";
+        }
+        catch (OperationCanceledException)
+        {
+            ErrorMessage = "Agent への要求がキャンセルされました。時間をおいて再送してください。";
+        }
+        catch (TimeoutException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        catch (HttpRequestException ex)
+        {
+            ErrorMessage = $"Agent への接続に失敗しました: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+}
