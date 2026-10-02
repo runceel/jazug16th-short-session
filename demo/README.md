@@ -11,7 +11,7 @@ GitHub Copilot SDK で作った agent を、Microsoft Foundry の Hosted Agent �
 | [EnvReporter.AppHost](./EnvReporter.AppHost/AppHost.cs) | Aspire AppHost。Foundry アカウント、project、`gpt-6-luna` の deployment、Hosted Agent を定義 |
 | [EnvReporter.Agent](./EnvReporter.Agent/Program.cs) | Copilot SDK + Microsoft Agent Framework の agent。DI に登録し、Foundry Hosted Agent の Responses プロトコルで公開 |
 | [EnvReporter.Agent/FoundryModelOptions.cs](./EnvReporter.Agent/FoundryModelOptions.cs) | Aspire が注入する `CHAT_URI` / `CHAT_MODELNAME` を Options としてバインドし、起動時に検証 |
-| [EnvReporter.Agent/ShellCommandPolicy.cs](./EnvReporter.Agent/ShellCommandPolicy.cs) | `onPreToolUse` フックで、シェルツールを固定の読み取り専用コマンドに制限 |
+| [EnvReporter.Agent/ShellCommandPolicy.cs](./EnvReporter.Agent/ShellCommandPolicy.cs) | `SessionHooks.OnPreToolUse` フックで、シェルツールを固定の読み取り専用コマンドに制限 |
 
 Agent は Aspire の ServiceDefaults を使いません。`AgentHost.CreateBuilder` が `Microsoft.OpenTelemetry` で OpenTelemetry を自動構成し、`OTEL_EXPORTER_OTLP_ENDPOINT`（Aspire ダッシュボード）や `APPLICATIONINSIGHTS_CONNECTION_STRING`（Foundry）があれば送信先も自動で設定します。ServiceDefaults の `UseOtlpExporter` を併用すると、OTLP exporter の二重登録で起動時に例外になります。
 

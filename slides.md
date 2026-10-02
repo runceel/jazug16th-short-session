@@ -190,10 +190,12 @@ var tokenRequest = new TokenRequestContext(
 
 var config = new SessionConfig
 {
+    // カタログ名ではなく Foundry の deployment 名を指定
     Model = "gpt-6-luna",
     Provider = new ProviderConfig
     {
         Type = "openai",
+        // example-foundry は説明用の架空のリソース名
         BaseUrl = "https://example-foundry.services.ai.azure.com/openai/v1/",
         WireApi = "responses",
         BearerTokenProvider = async _ =>
@@ -202,9 +204,6 @@ var config = new SessionConfig
     },
 };
 ```
-
-- `example-foundry`は説明用の架空のリソース名
-- `Model`にはカタログ名ではなく **Foundryのdeployment名**を指定
 
 <!--
 目安: 0:45
@@ -216,21 +215,19 @@ layout: center
 size: large
 ---
 
-## ローカルから Hosted Agent へ
+## デモアプリの構成
 
-| コンポーネント | このデモでの役割 |
+| コンポーネント | 役割 |
 |---|---|
-| GitHub Copilot SDK | session、tool、agent harness |
-| BYOK provider 設定 | Foundry endpoint と deployment 名を指定 |
-| Microsoft Agent Framework | SDK agent を `AIAgent` として構成 |
-| Foundry Hosted Agent | agent container と endpoint を管理 |
-| Aspire | Foundry リソースと agent のデプロイを記述 |
+| GitHub Copilot SDK | session と tool 実行。BYOK で Foundry deployment に推論要求を送信 |
+| Microsoft Agent Framework | `GitHubCopilotAgent` で SDK agent を `AIAgent` として扱い、Hosted Agent の Responses プロトコルで公開 |
+| Aspire AppHost | Foundry project、model deployment、Hosted Agent を定義 |
 
-推論要求は Copilot SDK から Foundry model endpoint へ送る。
+`aspire run` ではローカルで、`aspire deploy` では Foundry Hosted Agent として同じ agent を起動する。
 
 <!--
 目安: 1:00
-ここまで説明したCopilot SDK agentを、ローカル実行からFoundry Hosted Agentへ移します。SDKのBYOK設定は推論先、Microsoft Agent Frameworkはagentの抽象化とHosted Agent adapter、AspireはAzureリソースとデプロイを担当します。
+デモアプリは三つの要素で構成しています。Copilot SDKは前のスライドで示したBYOK設定でFoundry deploymentに推論要求を送ります。Microsoft Agent FrameworkはCopilot SDK agentをAIAgentとして扱い、Foundry Hosted AgentのResponsesプロトコルで公開します。Aspire AppHostはFoundry project、model deployment、Hosted Agentを定義します。同じAppHostを、ローカル実行とAzureへのデプロイの両方に使います。
 -->
 
 ---
@@ -242,7 +239,7 @@ size: large
 
 **質問：** 「実行環境を教えて」
 
-1. Foundry deployment を指定した Copilot SDK agent に入力
+1. `aspire run` で起動した agent の `/responses` に入力
 2. agent がシェル実行ツールを選択して環境を確認
 3. ツールの実行結果を用いて回答
 
@@ -260,18 +257,19 @@ size: large
 
 ## DEMO 2｜Aspire で Azure にデプロイ
 
-```text
-Copilot SDK agent
-  └─ BYOK: Foundry endpoint + deployment 名
-       ↓ Microsoft Agent Framework
-Hosted Agent adapter
-       ↓ Aspire で構成・デプロイ
-Microsoft Foundry Hosted Agent
-```
+| 項目 | DEMO 1（`aspire run`） | DEMO 2（`aspire deploy`） |
+|---|---|---|
+| agent のコードと AppHost | 共通 | 共通 |
+| 実行場所 | 開発 PC 上のプロセス | Foundry が管理する Linux コンテナー |
+| 受信 endpoint | ローカルの `/responses` | Hosted Agent endpoint |
+| 推論先 | Foundry deployment | 同じ deployment |
+| モデル呼び出しの ID | サインイン中のユーザー | Hosted Agent の agent identity |
+
+`aspire deploy` は、コンテナーイメージを ACR に push し、Foundry project に Hosted Agent を登録する。
 
 <!--
 目安: 1:15
-Aspireを使った構成とデプロイを示します。AspireはBYOKのprovider設定、実行時の認証トークン供給、ツールの安全性を自動で決めるものではありません。デプロイ済み環境を使う場合は設定箇所だけ短く説明します。
+DEMO 1と同じAppHostをaspire deployで実行します。Aspireはagentのコンテナーイメージをビルドして ACR に push し、Foundry projectにHosted Agentを登録します。ローカル実行との違いは実行場所、受信endpoint、モデル呼び出しに使うIDです。AspireはBYOKのprovider設定、実行時の認証トークン供給、ツールの安全性を自動で決めるものではありません。デプロイ済み環境を使う場合は設定箇所だけ短く説明します。
 -->
 
 ---
@@ -279,16 +277,20 @@ layout: center
 size: large
 ---
 
-## Hosted Agent の実行とモデル認証
+## Hosted Agent の 2 つの認証
 
-- Foundry Agent Service が agent container と endpoint を管理
-- BYOK token provider が使う実行 principal を特定
-- keyless 認証では `https://ai.azure.com/.default` の Entra token を使用
-- endpoint と deployment に対応する推論 RBAC を確認
+デプロイ後は、**誰が・どこに**アクセスするかで認証を分けて考える
+
+| 区間 | 認証する ID | 設定すること |
+|---|---|---|
+| ① クライアント → Hosted Agent | 呼び出し元のユーザー / アプリ | endpoint へのアクセス権 |
+| ② Hosted Agent 内の Copilot SDK → モデル | Hosted Agent の agent identity | 推論用の RBAC ロール |
+
+**② はローカル実行時（サインイン中のユーザー）と ID が変わるため、ロール付与を忘れると推論が失敗する**
 
 <!--
 目安: 1:00
-デプロイ後の実行では二つの認証を区別します。クライアントからHosted Agent endpointへの認証と、Hosted Agent内のBYOK providerからモデルendpointへの認証です。後者はtoken providerが実際に使うprincipalを確認します。Foundry projectのmanaged identityにproject endpoint用のFoundry Userロールがあることは、BYOKの直接endpoint呼び出しに使う別principalの権限を意味しません。`/openai/v1/` のkeyless推論ではscopeは `https://ai.azure.com/.default` です。必要なロールはモデルとendpointにより異なり、OpenAIモデル専用なら `Cognitive Services OpenAI User`、より広いFoundryモデルの推論では `Cognitive Services User` または `Foundry User` が候補です。選択deploymentの要件を確認します。
+デプロイ後の実行では二つの認証を区別します。①クライアントからHosted Agent endpointへの認証と、②Hosted Agent内のBYOK providerからモデルendpointへの認証です。②はローカルではサインイン中のユーザーでしたが、Hosted Agentではagent identityに変わるため、token providerが実際に使うprincipalを確認します。Foundry projectのmanaged identityにproject endpoint用のFoundry Userロールがあることは、BYOKの直接endpoint呼び出しに使う別principalの権限を意味しません。`/openai/v1/` のkeyless推論ではscopeは `https://ai.azure.com/.default` です。必要なロールはモデルとendpointにより異なり、OpenAIモデル専用なら `Cognitive Services OpenAI User`、より広いFoundryモデルの推論では `Cognitive Services User` または `Foundry User` が候補です。選択deploymentの要件を確認します。
 -->
 
 ---
@@ -309,16 +311,21 @@ size: large
 
 ---
 layout: center
-size: large
+size: xlarge
 ---
 
 ## まとめ
 
-- Copilot SDK の BYOK で Foundry model deployment を推論先に指定
-- Microsoft Agent Framework で SDK agent を構成
-- Aspire を用いて Foundry Hosted Agent としてデプロイ
+- **GitHub Copilot SDK**
+  - コーディング用途に限らず、**汎用的な Agent** の基盤として使われ始めている
+  - BYOK で Foundry deployment を推論先にできる
+- **Microsoft Agent Framework**
+  - `GitHubCopilotAgent` で **Copilot SDK にも対応**
+  - SDK agent を `AIAgent` として扱える
+- **Aspire**
+  - 同じ AppHost で `aspire run` はローカル実行、`aspire deploy` で **Foundry Hosted Agent に簡単にデプロイ**
 
 <!--
 目安: 0:45
-Copilot SDKのagent harnessを維持しながら、推論先をMicrosoft Foundryのmodel deploymentとして明示できます。ローカルとHosted Agentの両方で、deployment名、endpoint、実行IDの権限を確認することが重要です。全体で約10分です。
+まとめです。GitHub Copilot SDKはCopilotのagent harnessをそのまま組み込めるSDKで、コーディング用途に限らず、Copilot StudioやOfficeアプリなど汎用的なAgentの基盤として使われ始めています。BYOKでMicrosoft Foundryのmodel deploymentを推論先に指定できます。Microsoft Agent FrameworkはGitHubCopilotAgentでCopilot SDKにも対応しており、SDK agentをAIAgentとして扱い、Hosted AgentのResponsesプロトコルで公開できます。そしてAspireを使うと、同じAppHostでローカル実行とFoundry Hosted Agentへのデプロイを簡単に行えます。デプロイ後は、モデル呼び出しに使う実行IDの権限を確認することが重要です。全体で約10分です。
 -->
