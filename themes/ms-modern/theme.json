@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/runceel/github-copilot-app-presentation/main/.github/extensions/presentation/schema/theme-metadata-v1.schema.json",
+  "version": 1,
+  "cover": {
+    "background": {
+      "image": "assets/cover-facets.svg"
+    },
+    "logo": {
+      "image": "assets/microsoft-wordmark-dark.svg",
+      "alt": "Microsoft"
+    }
+  },
+  "backcover": {
+    "logo": {
+      "image": "assets/microsoft-wordmark-backcover.svg",
+      "alt": "Microsoft"
+    },
+    "copyright": "© Copyright Microsoft Corporation. All rights reserved."
+  }
+}

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="EnvReporter.Agent/EnvReporter.Agent.csproj" />
+  <Project Path="EnvReporter.AppHost/EnvReporter.AppHost.csproj" />
+</Solution>

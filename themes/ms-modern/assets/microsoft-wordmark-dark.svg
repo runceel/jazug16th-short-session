@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 86" role="img" aria-labelledby="title">
+  <title id="title">Microsoft</title>
+  <g transform="translate(4 5)">
+    <path fill="#f25022" d="M0 0h34v34H0z"/>
+    <path fill="#7fba00" d="M38 0h34v34H38z"/>
+    <path fill="#00a4ef" d="M0 38h34v34H0z"/>
+    <path fill="#ffb900" d="M38 38h34v34H38z"/>
+  </g>
+  <text x="95" y="60" fill="#666" font-family="Segoe UI, Arial, sans-serif" font-size="55" font-weight="600">Microsoft</text>
+</svg>
