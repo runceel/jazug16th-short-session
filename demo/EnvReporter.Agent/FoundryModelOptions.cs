@@ -3,11 +3,11 @@ using System.ComponentModel.DataAnnotations;
 namespace EnvReporter.Agent;
 
 /// <summary>
-/// Connection settings for the Foundry model deployment used through Copilot SDK BYOK.
+/// Copilot SDK の BYOK で使う Foundry model deployment の接続設定。
 /// </summary>
 public sealed class FoundryModelOptions
 {
-    // Aspire injects these from the referenced model deployment resource named "chat".
+    // Aspire が model deployment リソース chat から注入する。
     [ConfigurationKeyName("CHAT_URI")]
     [Required]
     public Uri? Endpoint { get; set; }

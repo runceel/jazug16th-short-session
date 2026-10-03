@@ -4,8 +4,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 var foundry = builder.AddFoundry("foundry");
 var project = foundry.AddProject("env-reporter-project");
 
-// gpt-6-luna is not in the generated FoundryModel descriptors yet, so specify name, version, and format explicitly.
-// The default capacity (1K TPM) is too small for an agent that makes tool calls.
+// FoundryModel に gpt-6-luna の記述子がないため、モデル名・バージョン・形式を明示する。
+// tool call を使う agent 向けに、既定値より大きい容量を設定する。
 var chat = project.AddModelDeployment("chat", "gpt-6-luna", "2026-09-22", "OpenAI")
     .WithProperties(deployment =>
     {
@@ -42,8 +42,7 @@ if (!builder.ExecutionContext.IsRunMode)
     }
 }
 
-// Locally, the agent uses AzureDeveloperCliCredential, which does not read AZURE_TENANT_ID by itself.
-// Pass the tenant that Aspire provisions the Foundry resources into.
+// ローカル実行では AzureDeveloperCliCredential に Aspire のテナント ID を明示する。
 if (builder.ExecutionContext.IsRunMode && builder.Configuration["Azure:TenantId"] is { Length: > 0 } tenantId)
 {
     agent.WithEnvironment("AZURE_TENANT_ID", tenantId);

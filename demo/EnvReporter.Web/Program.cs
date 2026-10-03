@@ -17,7 +17,7 @@ if (useEntraAuthentication && string.IsNullOrWhiteSpace(hostedAgentEndpoint))
 
 builder.AddServiceDefaults();
 
-// Add services to the container.
+// Blazor Server と Agent 通信用クライアントを DI に登録する。
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddHttpClient("AgentResponses", client =>
@@ -50,7 +50,7 @@ builder.Services.AddTransient<AgentClient>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// エラーハンドリングと Blazor の endpoint を構成する。
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);

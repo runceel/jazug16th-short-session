@@ -4,12 +4,11 @@ using GitHub.Copilot;
 namespace EnvReporter.Agent;
 
 /// <summary>
-/// Restricts the built-in shell tool to a fixed set of read-only commands.
-/// Every other tool call and command is denied before it runs.
+/// 組み込みシェルツールを読み取り専用コマンドに制限し、それ以外は実行前に拒否する。
 /// </summary>
 public sealed class ShellCommandPolicy(ILogger<ShellCommandPolicy> logger)
 {
-    // The Copilot runtime exposes its shell tool as "powershell" on Windows and "bash" elsewhere.
+    // OS に応じて Copilot runtime のシェルツール名を選ぶ。
     public static string ShellToolName { get; } = OperatingSystem.IsWindows() ? "powershell" : "bash";
 
     public static IReadOnlyList<string> AllowedCommands { get; } = OperatingSystem.IsWindows()

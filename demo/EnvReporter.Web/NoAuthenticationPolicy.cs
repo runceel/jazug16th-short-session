@@ -2,6 +2,7 @@ using System.ClientModel.Primitives;
 
 namespace EnvReporter.Web;
 
+// ローカル Aspire の内部 endpoint 向けに、認証処理を行わず pipeline を続行する。
 internal sealed class NoAuthenticationPolicy : AuthenticationPolicy
 {
     public override void Process(

@@ -13,11 +13,6 @@ title: GitHub Copilot SDK × Microsoft Foundry
 日本マイクロソフト<br/>
 Kazuki Ota
 
-<!--
-目安: 0:30
-Copilot SDKのagentハーネスは維持し、BYOKでMicrosoft Foundryのモデルdeploymentを推論先に指定します。Hosted Agentとして実行する構成とデモを紹介します。
--->
-
 ---
 layout: center
 size: xlarge
@@ -112,11 +107,6 @@ size: xlarge
 }
 ```
 
-<!--
-目安: 0:15
-名前と所属、連絡先を短く紹介します。最近は Markdown でプレゼンするツールを開発しています。
--->
-
 ---
 layout: center
 size: xlarge
@@ -127,7 +117,7 @@ size: xlarge
 - GitHub Copilot の **agent harness** をアプリケーションに組み込む SDK
 - session、会話履歴、tool call、ストリーミング応答を扱う
 - 組み込みツールに加え、独自ツールや MCP server を接続できる
-- 同じ runtime を **Copilot Studio、Excel、Outlook、PowerPoint、Word** などでも採用
+- **Copilot Studio、Excel、Outlook、PowerPoint、Word、Copilot Cowork** などでも採用
 - **対応言語：** TypeScript / Python / Go / .NET / Java / Rust
 
 ```architecture
@@ -234,8 +224,7 @@ size: xlarge
 ```
 
 <!--
-目安: 1:00
-Copilot SDKは単なるモデル呼び出し用SDKではなく、sessionやtool実行を含むagent harnessをアプリケーションから利用するためのSDKです。同じCopilot agent runtimeは、GitHub製品に加えてCopilot Studio、Excel、Outlook、PowerPoint、Wordなども支えています。GitHub Blogによると、これらの多くは独自のagent loopをCopilot SDKへ置き換えています。TypeScript、Python、Go、.NET、Java、Rustの6言語に対応しています。
+コーディング特化ではなくなってきている。
 出典: https://github.blog/ai-and-ml/generative-ai/migrating-the-github-copilot-runtime-to-rust-using-copilot/
 -->
 
@@ -255,14 +244,19 @@ using GitHub.Copilot;
 
 await using var client = new CopilotClient();
 
-await using var session = await client.CreateSessionAsync(new SessionConfig
-{
+await using var session = await client.CreateSessionAsync(
+  new SessionConfig
+  {
     Model = "gpt-6-luna",
-});
+  });
 
 var reply = await session.SendAndWaitAsync("Hello, world!");
 Console.WriteLine(reply?.Data.Content);
 ```
+
+<!--
+とっても簡単！
+-->
 
 ---
 layout: center
@@ -292,6 +286,10 @@ var config = new SessionConfig
 };
 ```
 
+<!--
+GitHub Copilot とは関係ないモデルも呼べる
+-->
+
 ---
 layout: center
 size: xlarge
@@ -301,7 +299,7 @@ size: xlarge
 
 Microsoft Agent Framework は GitHub Copilot SDK にも対応
 
-- `CopilotClient` を Agent Framework の `AIAgent` に変換
+- `CopilotClient` を Agent Framework の `AIAgent` に変換可能
 - `AIAgent` は Hosted Agent にデプロイ可能
 
 つまり **GitHub Copilot SDK を使ったエージェントを Microsoft Foundry にデプロイ可能**
@@ -327,6 +325,5 @@ size: xlarge
   - コーディング用途に限らず、**汎用的な Agent** の基盤として使われ始めている
   - BYOK で Foundry にデプロイしたモデルを推論先にできる
 - **Microsoft Agent Framework**
-  - `GitHubCopilotAgent` で **Copilot SDK にも対応**
-  - Microsoft Foundry Hosted Agent にデプロイ可能
-
+  - `AsAIAgent` で `CopilotClient` を `AIAgent` に変換可能
+  - GitHub Copilot SDK で作った Agent を Azure にデプロイのに良さそう…!!

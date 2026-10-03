@@ -15,7 +15,7 @@ internal sealed class HostedAgentApiVersionHandler(bool enabled) : DelegatingHan
 
             if (!hasApiVersion)
             {
-                // The Hosted Agent Responses protocol requires an API version; the OpenAI client omits it.
+                // OpenAI client が省略する必須の API version を Hosted Agent endpoint に追加する。
                 var uriBuilder = new UriBuilder(requestUri)
                 {
                     Query = string.IsNullOrEmpty(query) ? "api-version=v1" : $"{query}&api-version=v1",
