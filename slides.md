@@ -81,6 +81,13 @@ size: xlarge
               "size": "Large",
               "spacing": "Small",
               "wrap": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "**マイブーム**: Markdown プレゼンの探求",
+              "size": "Large",
+              "spacing": "Small",
+              "wrap": true
             }
           ]
         },
@@ -107,7 +114,7 @@ size: xlarge
 
 <!--
 目安: 0:15
-名前と所属、連絡先を短く紹介します。
+名前と所属、連絡先を短く紹介します。最近は Markdown でプレゼンするツールを開発しています。
 -->
 
 ---
