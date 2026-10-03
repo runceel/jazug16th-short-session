@@ -1,3 +1,4 @@
+﻿#pragma warning disable OPENAI001
 using EnvReporter.Web;
 using EnvReporter.Web.Components;
 using Azure.Identity;
@@ -23,7 +24,7 @@ builder.Services.AddHttpClient("AgentResponses", client =>
 {
     client.Timeout = TimeSpan.FromMinutes(6);
 }).AddHttpMessageHandler(() => new HostedAgentApiVersionHandler(useEntraAuthentication));
-builder.Services.AddSingleton<IChatClient>(services =>
+builder.Services.AddSingleton(services =>
 {
     var httpClient = services.GetRequiredService<IHttpClientFactory>().CreateClient("AgentResponses");
     AuthenticationPolicy authenticationPolicy = useEntraAuthentication
@@ -34,7 +35,6 @@ builder.Services.AddSingleton<IChatClient>(services =>
         : "http://env-reporter";
 
     // ローカル Aspire の内部 endpoint は認証不要なので、API key ヘッダーを付けない。
-#pragma warning disable OPENAI001
     var openAIClient = new OpenAIClient(authenticationPolicy, new OpenAIClientOptions
     {
         Endpoint = new Uri(endpoint),
@@ -44,7 +44,6 @@ builder.Services.AddSingleton<IChatClient>(services =>
     });
 
     var chatClient = openAIClient.GetResponsesClient().AsIChatClient("gpt-6-luna");
-#pragma warning restore OPENAI001
     return chatClient;
 });
 builder.Services.AddTransient<AgentClient>();

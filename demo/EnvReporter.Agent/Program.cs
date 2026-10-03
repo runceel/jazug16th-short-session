@@ -1,4 +1,4 @@
-using Azure.AI.AgentServer.Core;
+﻿#pragma warning disable GHCP001
 using Azure.Core;
 using Azure.Identity;
 using EnvReporter.Agent;
@@ -15,8 +15,16 @@ builder.Services.AddOptions<FoundryModelOptions>()
     .ValidateOnStart();
 
 // Keyless (Microsoft Entra ID) authentication to the Foundry model endpoint.
-// Locally this is the developer's Azure sign-in; in Foundry it is the identity available to the hosted container.
-builder.Services.AddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
+// Foundry sets FOUNDRY_HOSTING_ENVIRONMENT in the hosted container, where the agent identity is
+// available through the system-assigned managed identity endpoint. Locally, use the azd sign-in.
+var isFoundryHosted = !string.IsNullOrEmpty(builder.Configuration["FOUNDRY_HOSTING_ENVIRONMENT"]);
+builder.Services.AddSingleton<TokenCredential>(_ => isFoundryHosted
+    ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
+    : new AzureDeveloperCliCredential(new AzureDeveloperCliCredentialOptions
+    {
+        // AppHost passes the tenant that Aspire provisions the Foundry resources into.
+        TenantId = builder.Configuration["AZURE_TENANT_ID"],
+    }));
 builder.Services.AddSingleton<ShellCommandPolicy>();
 
 // The container owns the client and disposes it (stopping the Copilot runtime) on shutdown.
@@ -28,7 +36,7 @@ builder.Services.AddSingleton(sp => new CopilotClient(new CopilotClientOptions
 }));
 
 // AddFoundryResponses() without an agent instance resolves this non-keyed AIAgent from DI.
-builder.Services.AddSingleton<AIAgent>(sp =>
+builder.Services.AddSingleton(sp =>
 {
     var model = sp.GetRequiredService<IOptions<FoundryModelOptions>>().Value;
     var credential = sp.GetRequiredService<TokenCredential>();
@@ -38,15 +46,13 @@ builder.Services.AddSingleton<AIAgent>(sp =>
     var sessionConfig = new SessionConfig
     {
         Model = model.DeploymentName,
-        Provider = new ProviderConfig
+        Provider = new()
         {
             Type = "openai",
             BaseUrl = new Uri(model.Endpoint!, "openai/v1/").ToString(),
             WireApi = "responses",
-            // BearerTokenProvider is marked experimental (GHCP001) in GitHub.Copilot.SDK 1.0.16.
-#pragma warning disable GHCP001
-            BearerTokenProvider = async _ => (await credential.GetTokenAsync(tokenRequest, CancellationToken.None)).Token,
-#pragma warning restore GHCP001
+            BearerTokenProvider = async _ => 
+                (await credential.GetTokenAsync(tokenRequest, CancellationToken.None)).Token,
         },
         // Only the shell tool is exposed, and every call is checked against the allowlist by the pre-tool hook.
         AvailableTools = [ShellCommandPolicy.ShellToolName],
@@ -69,7 +75,6 @@ builder.Services.AddSingleton<AIAgent>(sp =>
 
     return sp.GetRequiredService<CopilotClient>().AsAIAgent(
         sessionConfig,
-        ownsClient: false,
         name: "env-reporter",
         description: "GitHub Copilot SDK agent that reports the runtime environment using a Microsoft Foundry model deployment.");
 });
@@ -78,4 +83,14 @@ builder.Services.AddFoundryResponses();
 builder.RegisterProtocol("responses", endpoints => endpoints.MapFoundryResponses());
 
 var app = builder.Build();
+
+// Warm up before listening: the first request no longer pays the Copilot runtime startup cost,
+// and a startup failure stops the process instead of being cached and failing every request.
+var copilotClient = app.App.Services.GetRequiredService<CopilotClient>();
+await copilotClient.StartAsync();
+var ping = await copilotClient.PingAsync("warmup");
+app.App.Logger.LogInformation(
+    "Copilot runtime is ready. Ping message: {Message}, server timestamp: {Timestamp}",
+    ping.Message, ping.Timestamp);
+
 app.Run();

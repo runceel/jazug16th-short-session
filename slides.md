@@ -20,7 +20,7 @@ Copilot SDKのagentハーネスは維持し、BYOKでMicrosoft Foundryのモデ�
 
 ---
 layout: center
-size: large
+size: xlarge
 ---
 
 ## GitHub Copilot SDK とは
@@ -37,17 +37,17 @@ size: large
   "title": "GitHub Copilot SDK の構成",
   "canvas": {
     "width": 1600,
-    "height": 440
+    "height": 350
   },
   "elements": [
     {
       "type": "node",
       "id": "app",
       "x": 60,
-      "y": 135,
+      "y": 75,
       "width": 320,
       "height": 170,
-      "text": "Apps\nServices",
+      "text": "アプリ",
       "icon": "browser",
       "style": {
         "fill": "surface",
@@ -61,7 +61,7 @@ size: large
       "type": "node",
       "id": "sdk",
       "x": 530,
-      "y": 105,
+      "y": 45,
       "width": 440,
       "height": 230,
       "text": "GitHub Copilot SDK\nAgent harness",
@@ -79,10 +79,10 @@ size: large
       "type": "node",
       "id": "model",
       "x": 1120,
-      "y": 20,
+      "y": -10,
       "width": 400,
-      "height": 170,
-      "text": "Model provider",
+      "height": 150,
+      "text": "モデル プロバイダー",
       "icon": "cloud",
       "style": {
         "fill": "surfaceInfo",
@@ -96,9 +96,9 @@ size: large
       "type": "node",
       "id": "tools",
       "x": 1120,
-      "y": 250,
+      "y": 160,
       "width": 400,
-      "height": 170,
+      "height": 150,
       "text": "Tools / MCP",
       "icon": "api",
       "style": {
@@ -145,44 +145,34 @@ layout: center
 size: large
 ---
 
-## GitHub Copilot 認証と Foundry BYOK
+## GitHub Copilot SDK の使い方
 
-### GitHub Copilot 認証
-
-```csharp
-var config = new SessionConfig
-{
-    Model = "gpt-6-luna",
-};
-```
-
-### BYOK：Microsoft Foundry
+1. `GitHub.Copilot.SDK` パッケージの追加
+2. `CopilotClient` を作成
+3. `SendAndWaitAsync` で呼出し
 
 ```csharp
-var config = new SessionConfig
+using GitHub.Copilot;
+
+await using var client = new CopilotClient();
+
+await using var session = await client.CreateSessionAsync(new SessionConfig
 {
     Model = "gpt-6-luna",
-    Provider = new ProviderConfig
-    {
-        Type = "openai",
-        BaseUrl = "https://example-foundry.services.ai.azure.com/openai/v1/",
-    },
-};
+});
+
+var reply = await session.SendAndWaitAsync("Hello, world!");
+Console.WriteLine(reply?.Data.Content);
 ```
-
-**Foundry を使う場合は、モデル名に加えて接続先と認証方法を指定する。**
-
-<!--
-目安: 0:45
-左はGitHub Copilot認証を使う通常の推論経路、右はBYOKの接続先にMicrosoft Foundryを使う今回の構成です。CopilotClientとSession APIは同じですが、Foundry BYOKではSessionConfigにProviderを追加し、modelにはFoundryのdeployment名を指定します。次のスライドでProviderConfigの中身を示します。
--->
 
 ---
 layout: center
 size: large
 ---
 
-## Foundry ProviderConfig の詳細
+## Microsoft Foundry のモデルも呼べる
+
+`SessionConfig` の `Provider` にモデルのデプロイ名、トークンの設定などをしておくと呼んでくれる。
 
 ```csharp
 var tokenRequest = new TokenRequestContext(
@@ -190,12 +180,10 @@ var tokenRequest = new TokenRequestContext(
 
 var config = new SessionConfig
 {
-    // カタログ名ではなく Foundry の deployment 名を指定
     Model = "gpt-6-luna",
     Provider = new ProviderConfig
     {
         Type = "openai",
-        // example-foundry は説明用の架空のリソース名
         BaseUrl = "https://example-foundry.services.ai.azure.com/openai/v1/",
         WireApi = "responses",
         BearerTokenProvider = async _ =>
@@ -205,89 +193,29 @@ var config = new SessionConfig
 };
 ```
 
-<!--
-目安: 0:45
-FoundryのOpenAI互換endpointを使うため、provider typeはopenai、WireApiはresponsesを指定します。example-foundryは説明用の架空のリソース名です。BearerTokenProviderは実行時のidentityからEntra tokenを取得します。固定tokenをソースコードやコンテナーイメージに保存しません。
--->
-
 ---
 layout: center
-size: large
+size: xlarge
 ---
 
-## デモアプリの構成
+## Microsoft Foundry にデプロイしたい
 
-| コンポーネント | 役割 |
-|---|---|
-| GitHub Copilot SDK | session と tool 実行。BYOK で Foundry deployment に推論要求を送信 |
-| Microsoft Agent Framework | `GitHubCopilotAgent` で SDK agent を `AIAgent` として扱い、Hosted Agent の Responses プロトコルで公開 |
-| Aspire AppHost | Foundry project、model deployment、Hosted Agent を定義 |
+Microsoft Agent Framework は GitHub Copilot SDK にも対応
 
-`aspire run` ではローカルで、`aspire deploy` では Foundry Hosted Agent として同じ agent を起動する。
+- `CopilotClient` を Agent Framework の `AIAgent` に変換
+- `AIAgent` は Hosted Agent にデプロイ可能
 
-<!--
-目安: 1:00
-デモアプリは三つの要素で構成しています。Copilot SDKは前のスライドで示したBYOK設定でFoundry deploymentに推論要求を送ります。Microsoft Agent FrameworkはCopilot SDK agentをAIAgentとして扱い、Foundry Hosted AgentのResponsesプロトコルで公開します。Aspire AppHostはFoundry project、model deployment、Hosted Agentを定義します。同じAppHostを、ローカル実行とAzureへのデプロイの両方に使います。
--->
+つまり **GitHub Copilot SDK を使ったエージェントを Microsoft Foundry にデプロイ可能**
 
 ---
-layout: center
-size: large
+layout: section
+size: xlarge
 ---
 
-## DEMO 1｜ローカル実行
+## Microsoft Foundry Hosted Agent にデプロイ
 
-**質問：** 「実行環境を教えて」
+### GitHub Copilot SDK & Microsoft Agent Framework
 
-1. `aspire run` で起動した agent の `/responses` に入力
-2. agent がシェル実行ツールを選択して環境を確認
-3. ツールの実行結果を用いて回答
-
-**ツール実行の許可対象：** デモに必要な操作に限定
-
-<!--
-目安: 2:15（説明0:30 + デモ1:45）
-同じFoundry deploymentを推論先にした状態で、組み込みシェルツールを使う流れを示します。ローカルの認証は開発用Entra IDまたはAPI keyを使い、資格情報はソースやイメージに含めません。
--->
-
----
-layout: center
-size: large
----
-
-## DEMO 2｜Aspire で Azure にデプロイ
-
-| 項目 | DEMO 1（`aspire run`） | DEMO 2（`aspire deploy`） |
-|---|---|---|
-| agent のコードと AppHost | 共通 | 共通 |
-| 実行場所 | 開発 PC 上のプロセス | Foundry が管理する Linux コンテナー |
-| 受信 endpoint | ローカルの `/responses` | Hosted Agent endpoint |
-| 推論先 | Foundry deployment | 同じ deployment |
-| モデル呼び出しの ID | サインイン中のユーザー | Hosted Agent の agent identity |
-
-`aspire deploy` は、コンテナーイメージを ACR に push し、Foundry project に Hosted Agent を登録する。
-
-<!--
-目安: 1:30
-DEMO 1と同じAppHostをaspire deployで実行します。Aspireはagentのコンテナーイメージをビルドして ACR に push し、Foundry projectにHosted Agentを登録します。ローカル実行との違いは実行場所、受信endpoint、モデル呼び出しに使うIDです。AspireはBYOKのprovider設定、実行時の認証トークン供給、ツールの安全性を自動で決めるものではありません。デプロイ済み環境を使う場合は設定箇所だけ短く説明します。
-モデル呼び出しのIDがサインイン中のユーザーからagent identityに変わるため、BYOKのtoken providerが実際に使うprincipalに推論用のRBACロールが必要です。ロール付与を忘れるとデプロイ後に推論が失敗します。`/openai/v1/` のkeyless推論ではscopeは `https://ai.azure.com/.default` です。必要なロールはモデルとendpointにより異なり、OpenAIモデル専用なら `Cognitive Services OpenAI User`、より広いFoundryモデルの推論では `Cognitive Services User` または `Foundry User` が候補です。Foundry projectのmanaged identityの権限は、BYOKの直接endpoint呼び出しに使う別principalの権限を意味しません。
--->
-
----
-layout: center
-size: large
----
-
-## DEMO 2｜Hosted Agent の実行
-
-- Hosted Agent endpoint にリクエスト
-- ローカルと同じ Foundry deployment による応答を確認
-- session 実行と tool call を確認
-
-<!--
-目安: 1:30
-デプロイしたagentにローカルと同じ入力を与え、推論先がFoundry deploymentであること、ツール実行と応答を確認します。デプロイ操作に時間がかかる場合は、事前にデプロイしたendpointを使います。
--->
 
 ---
 layout: center
@@ -298,14 +226,8 @@ size: xlarge
 
 - **GitHub Copilot SDK**
   - コーディング用途に限らず、**汎用的な Agent** の基盤として使われ始めている
-  - BYOK で Foundry deployment を推論先にできる
+  - BYOK で Foundry にデプロイしたモデルを推論先にできる
 - **Microsoft Agent Framework**
   - `GitHubCopilotAgent` で **Copilot SDK にも対応**
-  - SDK agent を `AIAgent` として扱える
-- **Aspire**
-  - 同じ AppHost で `aspire run` はローカル実行、`aspire deploy` で **Foundry Hosted Agent に簡単にデプロイ**
+  - Microsoft Foundry Hosted Agent にデプロイ可能
 
-<!--
-目安: 0:45
-まとめです。GitHub Copilot SDKはCopilotのagent harnessをそのまま組み込めるSDKで、コーディング用途に限らず、Copilot StudioやOfficeアプリなど汎用的なAgentの基盤として使われ始めています。BYOKでMicrosoft Foundryのmodel deploymentを推論先に指定できます。Microsoft Agent FrameworkはGitHubCopilotAgentでCopilot SDKにも対応しており、SDK agentをAIAgentとして扱い、Hosted AgentのResponsesプロトコルで公開できます。そしてAspireを使うと、同じAppHostでローカル実行とFoundry Hosted Agentへのデプロイを簡単に行えます。デプロイ後は、モデル呼び出しに使う実行IDの権限を確認することが重要です。全体で約10分です。
--->

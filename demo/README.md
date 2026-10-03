@@ -64,7 +64,8 @@ Foundry Hosted Agent（EnvReporter.Agent コンテナー）
 - Docker（`aspire deploy` でのイメージのビルドと push に使用）
 - Azure サブスクリプションと、リソースを作成できる権限
 - `gpt-6-luna`（`GlobalStandard`）を利用できるリージョンとクォータ。容量は [AppHost.cs](./EnvReporter.AppHost/AppHost.cs) で 50K TPM に設定しています
-- `az login` などで `DefaultAzureCredential` が使える状態
+- `azd auth login` でサインインした状態（Agent のローカル実行は `AzureDeveloperCliCredential` で Foundry の token を取得します）
+- `az login` でサインインした状態（`aspire deploy` の `Azure__CredentialSource = 'AzureCli'` と、README の `az` コマンドで使用）
 
 GitHub Copilot のサインインは使いません。推論はすべて BYOK で Foundry に送ります。Copilot CLI ランタイムは `GitHub.Copilot.SDK` がビルド時に取得し、出力とコンテナーに同梱します。
 
@@ -85,9 +86,16 @@ $body = @{ input = '実行環境を教えて'; stream = $false } | ConvertTo-Jso
 Invoke-RestMethod -Method Post -Uri http://localhost:8088/responses -ContentType 'application/json' -Body $body
 ```
 
-ローカルの推論にはサインイン中のユーザーの Entra token を使います。`401` が返る場合は、そのユーザーに Foundry アカウントの `Cognitive Services OpenAI User` が割り当てられているかを確認してください。
+ローカルの推論には、`azd auth login` でサインインしたユーザーの Entra token を使います。`401` が返る場合は、そのユーザーに Foundry アカウントの `Cognitive Services OpenAI User` が割り当てられているかを確認してください。
 
-`DefaultAzureCredential` は Azure CLI より先に Visual Studio などの資格情報を試すため、別テナントのサインインが使われると `Token tenant ... does not match resource tenant` で失敗します。これを避けるため、AppHost はローカル実行時だけ、ユーザーシークレットの `Azure:TenantId` を `AZURE_TENANT_ID` として Agent に渡します。
+Agent は `FOUNDRY_HOSTING_ENVIRONMENT` が設定されているかどうかで credential を切り替えます。`DefaultAzureCredential` のように複数の資格情報を順に試さないため、Visual Studio など別テナントのサインインが使われることはありません。
+
+| 実行場所 | credential | token を取得する ID |
+|---|---|---|
+| ローカル（`aspire run`） | `AzureDeveloperCliCredential` | `azd auth login` のユーザー |
+| Foundry Hosted Agent | `ManagedIdentityCredential`（system-assigned） | Hosted Agent の agent identity |
+
+`AzureDeveloperCliCredential` は `AZURE_TENANT_ID` を自動では読みません。AppHost はローカル実行時だけ、ユーザーシークレットの `Azure:TenantId` を `AZURE_TENANT_ID` として Agent に渡し、Agent はその値を `AzureDeveloperCliCredentialOptions.TenantId` に設定します。
 
 ## Azure にデプロイする（DEMO 2）
 
@@ -169,6 +177,8 @@ Hosted Agent は、セッションごとの永続ストレージを `$HOME`（`/
 
 この agent は、BYOK で Foundry アカウントの `/openai/v1/` endpoint を直接呼び出します。project endpoint 経由ではありません。Microsoft Learn の [Hosted agent permissions reference](https://learn.microsoft.com/azure/foundry/agents/concepts/hosted-agent-permissions) では、この場合、agent identity にアカウントスコープのロールが必要とされています。
 
+Hosted Agent のコンテナーでは、agent identity（Hosted Agent 定義の `instance_identity`）を system-assigned managed identity の endpoint から取得できます。Agent は `new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)` で `https://ai.azure.com/.default` の token を取得します。`AZURE_CLIENT_ID` は設定されていないため、user-assigned の指定は不要です。
+
 Aspire 13.6 の `aspire deploy` は、Hosted Agent の作成後に agent identity へ Foundry アカウントスコープの `Foundry User` を自動で割り当てます（デプロイログの `Assigned Foundry User role to hosted agent ...`）。手動の割り当ては不要でした。応答が `401` / `PermissionDenied` になる場合は、次のコマンドで agent identity のロールを確認してください。
 
 ```powershell
@@ -204,6 +214,7 @@ Foundry 実行環境の判定は Agent がコマンドの標準出力を解釈�
 
 ## 注意事項
 
+- Agent は HTTP の受け付けを始める前に、`CopilotClient.StartAsync()` と `PingAsync("warmup")` で Copilot CLI ランタイムを起動・疎通確認し、`Copilot runtime is ready. Ping message: pong: warmup` をログに出力します。最初の要求でランタイムの起動を待たずに済みます。`StartAsync()` は失敗した結果を保持し、以降の呼び出しもすべて失敗します。そのため、起動に失敗した場合は要求を受け付けずにプロセスを終了させています。`app.Run()` より前のログは Application Insights に送信されないため、このログはコンソール出力で確認します。
 - `ProviderConfig.BearerTokenProvider` は、GitHub.Copilot.SDK 1.0.16 では評価用 API（`GHCP001`）です。[Program.cs](./EnvReporter.Agent/Program.cs) では、該当箇所だけ警告を抑制しています。
 - `gpt-6-luna` は、Aspire 13.6 preview の `FoundryModel` 記述子にまだありません。そのため、モデル名・バージョン（`2026-09-22`）・形式を文字列で指定しています。
 - Aspire CLI が AppHost SDK（13.6.0）より古いと、`aspire publish` や `aspire deploy` が失敗することがあります。先に CLI を更新してください。

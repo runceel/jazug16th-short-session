@@ -1,3 +1,4 @@
+﻿#pragma warning disable ASPIRECOMPUTE003
 var builder = DistributedApplication.CreateBuilder(args);
 
 var foundry = builder.AddFoundry("foundry");
@@ -30,9 +31,7 @@ if (!builder.ExecutionContext.IsRunMode)
     var containerApps = builder.AddAzureContainerAppEnvironment("env-reporter-web-env")
         .WithAzureContainerRegistry(registry);
 
-#pragma warning disable ASPIRECOMPUTE003
     web.WithContainerRegistry(registry);
-#pragma warning restore ASPIRECOMPUTE003
     var cloudWeb = web.WithComputeEnvironment(containerApps)
         .PublishAsAzureContainerApp((_, _) => { })
         .WithEnvironment("Foundry__UseEntraAuthentication", "true");
@@ -43,8 +42,8 @@ if (!builder.ExecutionContext.IsRunMode)
     }
 }
 
-// Locally, DefaultAzureCredential may pick a developer sign-in (e.g. Visual Studio) from another tenant.
-// Pin it to the tenant that Aspire provisions the Foundry resources into.
+// Locally, the agent uses AzureDeveloperCliCredential, which does not read AZURE_TENANT_ID by itself.
+// Pass the tenant that Aspire provisions the Foundry resources into.
 if (builder.ExecutionContext.IsRunMode && builder.Configuration["Azure:TenantId"] is { Length: > 0 } tenantId)
 {
     agent.WithEnvironment("AZURE_TENANT_ID", tenantId);
