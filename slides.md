@@ -23,6 +23,98 @@ layout: center
 size: xlarge
 ---
 
+## 自己紹介
+
+```adaptive-card
+{
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "verticalContentAlignment": "Center",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "大田 一希 (Kazuki Ota)",
+              "size": "ExtraLarge",
+              "weight": "Bolder",
+              "wrap": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "Microsoft",
+              "size": "Large",
+              "isSubtle": true,
+              "spacing": "Small",
+              "wrap": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "Cloud Solution Architect & Evangelist",
+              "size": "Large",
+              "isSubtle": true,
+              "spacing": "None",
+              "wrap": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "**X**: @okazuki",
+              "size": "Large",
+              "spacing": "ExtraLarge",
+              "wrap": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "**zenn**: zenn.dev/okazuki",
+              "size": "Large",
+              "spacing": "Small",
+              "wrap": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "**好き**: C# / GitHub Copilot",
+              "size": "Large",
+              "spacing": "Small",
+              "wrap": true
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "auto",
+          "verticalContentAlignment": "Center",
+          "items": [
+            {
+              "type": "Image",
+              "url": "assets/profile-square.jpg",
+              "altText": "Kazuki Ota",
+              "style": "Person",
+              "width": "320px",
+              "height": "320px"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+<!--
+目安: 0:15
+名前と所属、連絡先を短く紹介します。
+-->
+
+---
+layout: center
+size: xlarge
+---
+
 ## GitHub Copilot SDK とは
 
 - GitHub Copilot の **agent harness** をアプリケーションに組み込む SDK
